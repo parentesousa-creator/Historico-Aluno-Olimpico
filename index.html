@@ -1,659 +1,234 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciador de Olimpíadas Científicas</title>
-    
-    <!-- Tailwind CSS -->
+    <title>Gestão de Olimpíadas Científicas</title>
+    <!-- Tailwind CSS para um design moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- SheetJS para ler arquivos Excel -->
+    <!-- SheetJS para ler ficheiros Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <!-- Phosphor Icons para ícones bonitos -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-        }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-        }
-
-        .toast-enter {
-            transform: translateY(100%);
-            opacity: 0;
-        }
-        .toast-enter-active {
-            transform: translateY(0);
-            opacity: 1;
-            transition: all 0.3s ease-out;
-        }
-        .toast-leave {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        .toast-leave-active {
-            transform: translateY(100%);
-            opacity: 0;
-            transition: all 0.3s ease-in;
-        }
-    </style>
 </head>
-<body class="text-gray-800 h-screen overflow-hidden flex flex-col">
+<body class="bg-gray-100 text-gray-800 font-sans p-6">
 
-    <header class="bg-indigo-700 text-white shadow-md z-10 flex-shrink-0">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center relative">
-            <div class="flex items-center gap-3">
-                <i class="ph-fill ph-medal text-3xl text-yellow-400"></i>
-                <h1 class="text-xl font-bold tracking-tight">Olimpíadas Acadêmicas PRO</h1>
-            </div>
-            <div class="text-sm font-medium text-indigo-200">
-                Gerenciador de Resultados de Alunos
-            </div>
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
+        <h1 class="text-3xl font-bold text-center text-blue-600 mb-8">Gestão de Olimpíadas Académicas</h1>
+
+        <!-- Secção 1: Importar Planilha Excel -->
+        <div class="mb-8 p-4 border border-blue-200 bg-blue-50 rounded-lg">
+            <h2 class="text-xl font-semibold mb-2">1. Importar Alunos (Excel)</h2>
+            <p class="text-sm text-gray-600 mb-4">A folha de cálculo deve conter as colunas: Nome, Turma, Serie, Idade.</p>
+            <input type="file" id="excelFile" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"/>
         </div>
-    </header>
 
-    <main class="flex-1 flex overflow-hidden">
-        
-        <!-- SIDEBAR: Lista de Alunos e Upload -->
-        <aside class="w-full md:w-1/3 lg:w-1/4 bg-white border-r border-gray-200 flex flex-col h-full z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-            <!-- Upload Area -->
-            <div class="p-6 border-b border-gray-100 bg-gray-50">
-                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">1. Importar Alunos</h2>
-                <label for="excel-upload" class="flex flex-col items-center justify-center w-full h-32 border-2 border-indigo-300 border-dashed rounded-xl cursor-pointer bg-white hover:bg-indigo-50 transition-colors group">
-                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                        <i class="ph ph-file-xls text-3xl text-indigo-500 mb-2 group-hover:scale-110 transition-transform"></i>
-                        <p class="mb-2 text-sm text-gray-500 text-center px-4"><span class="font-semibold text-indigo-600">Clique para anexar</span> ou arraste a planilha Excel</p>
-                        <p class="text-xs text-gray-400">Colunas: Nome, Turma, Série, Idade</p>
-                    </div>
-                    <input id="excel-upload" type="file" accept=".xlsx, .xls" class="hidden" onchange="handleFileUpload(event)" />
-                </label>
-            </div>
-
-            <!-- Student List -->
-            <div class="flex-1 overflow-y-auto p-4 flex flex-col">
-                <div class="flex justify-between items-center mb-4 px-2">
-                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">2. Selecionar Aluno</h2>
-                    <span id="student-count" class="bg-indigo-100 text-indigo-700 py-1 px-2 rounded-full text-xs font-bold">0</span>
-                </div>
-                
-                <!-- Search Box -->
-                <div class="relative mb-4">
-                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    <input type="text" id="search-input" placeholder="Buscar aluno..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow" oninput="renderStudents()">
-                </div>
-
-                <ul id="student-list" class="space-y-2">
-                    <!-- Lista injetada via JS -->
-                    <div class="text-center p-6 text-gray-400 flex flex-col items-center">
-                        <i class="ph ph-users text-4xl mb-2 opacity-50"></i>
-                        <p class="text-sm">Nenhum aluno carregado ainda.</p>
-                        <p class="text-xs mt-1">Importe uma planilha acima.</p>
-                    </div>
-                </ul>
-            </div>
-        </aside>
-
-        <!-- MAIN CONTENT: Detalhes do Aluno -->
-        <section class="flex-1 bg-gray-50 h-full overflow-y-auto relative" id="main-content">
-            <!-- Empty State -->
-            <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                <i class="ph ph-student text-6xl mb-4 opacity-30"></i>
-                <h3 class="text-xl font-semibold text-gray-600 mb-2">Nenhum aluno selecionado</h3>
-                <p class="text-sm max-w-md text-center">Selecione um aluno na lista ao lado para gerenciar suas medalhas e participações em olimpíadas acadêmicas.</p>
-            </div>
-
-            <!-- Student Detail View (Hidden by default) -->
-            <div id="student-detail" class="hidden p-8 max-w-5xl mx-auto">
-                <!-- Header Aluno -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div class="flex items-center gap-4">
-                        <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-2xl font-bold shadow-inner" id="detail-initials">
-                            J
-                        </div>
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-800" id="detail-name">João da Silva</h2>
-                            <div class="flex flex-wrap gap-2 mt-2 text-sm text-gray-500">
-                                <span class="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded"><i class="ph ph-chalkboard-teacher"></i> <span id="detail-turma">Turma A</span></span>
-                                <span class="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded"><i class="ph ph-books"></i> <span id="detail-serie">9º Ano</span></span>
-                                <span class="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded"><i class="ph ph-calendar-blank"></i> <span id="detail-idade">14 anos</span></span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Action Buttons -->
-                    <div class="flex gap-2 w-full md:w-auto">
-                        <button onclick="openModal('modal-detalhes')" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium transition-colors shadow-sm text-sm">
-                            <i class="ph ph-list-magnifying-glass text-lg"></i>
-                            Detalhes de Participação
-                        </button>
-                        <button onclick="openModal('modal-resumo')" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors shadow-sm text-sm">
-                            <i class="ph ph-chart-polar text-lg"></i>
-                            Resumo Acadêmico
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Adicionar Nova Olimpíada -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <i class="ph ph-plus-circle text-indigo-500"></i> Registrar Resultado
-                    </h3>
-                    
-                    <form id="form-olimpiada" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end" onsubmit="addOlympiad(event)">
-                        <div class="col-span-1 md:col-span-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Olimpíada</label>
-                            <input type="text" id="input-olimpiada" required placeholder="Ex: OBMEP, OBA, Canguru..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow">
-                        </div>
-                        <div class="col-span-1 md:col-span-3">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Edição/Ano (Opcional)</label>
-                            <input type="number" id="input-ano" placeholder="Ex: 2023" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow">
-                        </div>
-                        <div class="col-span-1 md:col-span-3">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Resultado / Status</label>
-                            <select id="input-status" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white transition-shadow">
-                                <option value="" disabled selected>Selecione...</option>
-                                <option value="Ouro">Medalha de Ouro</option>
-                                <option value="Prata">Medalha de Prata</option>
-                                <option value="Bronze">Medalha de Bronze</option>
-                                <option value="Mencao">Menção Honrosa</option>
-                                <option value="Fase2">Avançou de Fase (Fase 2+)</option>
-                                <option value="Participacao">Apenas Participou</option>
-                            </select>
-                        </div>
-                        <div class="col-span-1 md:col-span-2">
-                            <button type="submit" class="w-full py-2 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-semibold transition-colors shadow-sm flex justify-center items-center gap-2">
-                                <i class="ph ph-check"></i> Adicionar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Lista de Registros do Aluno -->
-                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 px-1">
-                    <i class="ph ph-list-dashes text-gray-500"></i> Histórico Lançado
-                </h3>
-                <div id="records-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Cards de olimpíadas renderizados via JS -->
-                </div>
-
-            </div>
-        </section>
-    </main>
-
-    
-    <!-- MODAL: Resumo Acadêmico -->
-    <div id="modal-resumo" class="fixed inset-0 modal-overlay z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden transform scale-95 transition-transform duration-300" id="modal-resumo-content">
-            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white flex justify-between items-center">
-                <h3 class="text-xl font-bold flex items-center gap-2"><i class="ph ph-chart-polar text-2xl"></i> Resumo Acadêmico</h3>
-                <button onclick="closeModal('modal-resumo')" class="text-white hover:text-indigo-200 transition-colors">
-                    <i class="ph ph-x text-2xl"></i>
-                </button>
-            </div>
-            <div class="p-6">
-                <div class="text-center mb-6">
-                    <h4 class="text-xl font-bold text-gray-800" id="resumo-name">Nome</h4>
-                    <p class="text-sm text-gray-500" id="resumo-subtitle">Turma | Série</p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <div class="bg-gray-50 border border-gray-100 p-4 rounded-xl text-center">
-                        <div class="text-3xl font-black text-indigo-600" id="resumo-total">0</div>
-                        <div class="text-xs text-gray-500 font-medium uppercase mt-1">Total de Participações</div>
-                    </div>
-                    <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-xl text-center">
-                        <div class="text-3xl font-black text-yellow-600" id="resumo-medalhas">0</div>
-                        <div class="text-xs text-yellow-700 font-medium uppercase mt-1">Total de Medalhas</div>
-                    </div>
-                </div>
-
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-lg">
-                        <span class="flex items-center gap-2 text-sm font-medium text-gray-700"><div class="w-3 h-3 rounded-full bg-yellow-400"></div> Ouros</span>
-                        <span class="font-bold text-gray-800" id="resumo-ouro">0</span>
-                    </div>
-                    <div class="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-lg">
-                        <span class="flex items-center gap-2 text-sm font-medium text-gray-700"><div class="w-3 h-3 rounded-full bg-gray-300"></div> Pratas</span>
-                        <span class="font-bold text-gray-800" id="resumo-prata">0</span>
-                    </div>
-                    <div class="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-lg">
-                        <span class="flex items-center gap-2 text-sm font-medium text-gray-700"><div class="w-3 h-3 rounded-full bg-amber-600"></div> Bronzes</span>
-                        <span class="font-bold text-gray-800" id="resumo-bronze">0</span>
-                    </div>
-                    <div class="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-lg border-t border-gray-200 mt-2">
-                        <span class="text-sm font-medium text-gray-500">Outros (Menções, Fases, Part.)</span>
-                        <span class="font-bold text-gray-600" id="resumo-outros">0</span>
-                    </div>
-                </div>
-            </div>
-            <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
-                <button onclick="closeModal('modal-resumo')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors text-sm">Fechar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: Detalhes de Participação (Categorizado) -->
-    <div id="modal-detalhes" class="fixed inset-0 modal-overlay z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl mx-4 overflow-hidden transform scale-95 transition-transform duration-300 max-h-[90vh] flex flex-col" id="modal-detalhes-content">
-            <div class="bg-white border-b border-gray-200 p-5 flex justify-between items-center flex-shrink-0">
+        <!-- Secção 2: Adicionar Resultado Olímpico -->
+        <div class="mb-8 p-4 border border-green-200 bg-green-50 rounded-lg">
+            <h2 class="text-xl font-semibold mb-4">2. Registar Desempenho do Aluno</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        <i class="ph ph-list-magnifying-glass text-indigo-600 text-xl"></i> 
-                        Detalhes de Participação
-                    </h3>
-                    <p class="text-sm text-gray-500 mt-1" id="detalhes-nome-aluno">Aluno</p>
+                    <label class="block text-sm font-medium mb-1">Selecionar Aluno</label>
+                    <select id="alunoSelect" class="w-full p-2 border rounded">
+                        <option value="">Carregue o Excel primeiro...</option>
+                    </select>
                 </div>
-                <button onclick="closeModal('modal-detalhes')" class="text-gray-400 hover:text-gray-700 transition-colors bg-gray-100 hover:bg-gray-200 p-2 rounded-full">
-                    <i class="ph ph-x text-xl"></i>
-                </button>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Olimpíada (Ex: OBMEP, OBA, OBF)</label>
+                    <input type="text" id="nomeOlimpiada" class="w-full p-2 border rounded" placeholder="Nome da Olimpíada">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Resultado / Fase</label>
+                    <select id="resultadoSelect" class="w-full p-2 border rounded">
+                        <option value="Premiado - Ouro">Premiado - Medalha de Ouro</option>
+                        <option value="Premiado - Prata">Premiado - Medalha de Prata</option>
+                        <option value="Premiado - Bronze">Premiado - Medalha de Bronze</option>
+                        <option value="Premiado - Menção Honrosa">Premiado - Menção Honrosa</option>
+                        <option value="Avançou de Fase">Avançou de Fase</option>
+                        <option value="Apenas Participou">Apenas Participou</option>
+                    </select>
+                </div>
+            </div>
+            <button id="btnSalvar" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full transition">Guardar no Firebase</button>
+            <p id="msgSucesso" class="text-green-700 text-sm mt-2 hidden text-center font-bold">Registo guardado com sucesso!</p>
+        </div>
+
+        <!-- Secção 3: Resumo Académico -->
+        <div class="mb-8 p-4 border border-purple-200 bg-purple-50 rounded-lg">
+            <h2 class="text-xl font-semibold mb-4">3. Resumo Académico</h2>
+            <div class="flex gap-4 mb-4">
+                <button id="btnResumo" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 flex-1 transition">Ver Resumo Geral</button>
+                <button id="btnHistorico" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex-1 transition">Ver Histórico Detalhado</button>
             </div>
             
-            <div class="p-6 overflow-y-auto flex-1 bg-gray-50" id="detalhes-list-container">
-                <!-- Injetado via JS -->
-            </div>
-            
-            <div class="p-4 bg-white border-t border-gray-200 flex justify-end flex-shrink-0">
-                <button onclick="closeModal('modal-detalhes')" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors shadow-sm text-sm">Entendido</button>
-            </div>
+            <!-- Área onde os resultados vão aparecer -->
+            <div id="resultadoArea" class="bg-white p-4 border rounded shadow-inner min-h-[100px] hidden"></div>
         </div>
     </div>
 
-    <!-- Container para Toasts -->
-    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+    <!-- FIREBASE MODULES (Versão 10 Modular) -->
+    <script type="module">
+        // Importar as funções do Firebase através de CDNs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
 
-    <script>
-        // ESTADO DA APLICAÇÃO
-        const AppState = {
-            students: [],
-            currentStudentId: null,
+        // =====================================================================
+        // PASSO IMPORTANTE: COLOQUE AS SUAS CHAVES DO FIREBASE AQUI
+        // Substitua o objeto abaixo pelo 'firebaseConfig' que copiou do Firebase
+        // =====================================================================
+        const firebaseConfig = {
+ 		 apiKey: "AIzaSyBDA5CVPHeVBEb3KcaZH19Y7Pz7A-ghkWo",
+  		authDomain: "resultados-alunos-olimpicos.firebaseapp.com",
+  		projectId: "resultados-alunos-olimpicos",
+  		storageBucket: "resultados-alunos-olimpicos.firebasestorage.app",
+ 		 messagingSenderId: "479169468642",
+ 		 appId: "1:479169468642:web:f034041d13e954ef70a6bb"
         };
 
-        // MAPA DE CORES E ÍCONES PARA STATUS
-        const StatusConfig = {
-            "Ouro": { label: "Medalha de Ouro", color: "bg-yellow-400", text: "text-yellow-800", icon: "ph-medal", category: "premiado" },
-            "Prata": { label: "Medalha de Prata", color: "bg-gray-300", text: "text-gray-800", icon: "ph-medal", category: "premiado" },
-            "Bronze": { label: "Medalha de Bronze", color: "bg-amber-600", text: "text-white", icon: "ph-medal", category: "premiado" },
-            "Mencao": { label: "Menção Honrosa", color: "bg-blue-100", text: "text-blue-800", icon: "ph-certificate", category: "premiado" },
-            "Fase2": { label: "Avançou de Fase", color: "bg-purple-100", text: "text-purple-800", icon: "ph-arrow-fat-line-up", category: "fase" },
-            "Participacao": { label: "Apenas Participou", color: "bg-gray-100", text: "text-gray-600", icon: "ph-check-circle", category: "participacao" }
-        };
+        // Inicializar Firebase e Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-        // --- SISTEMA DE TOAST (NOTIFICAÇÕES) ---
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            
-            const typeConfig = {
-                success: { bg: 'bg-emerald-500', icon: 'ph-check-circle' },
-                error: { bg: 'bg-red-500', icon: 'ph-x-circle' },
-                info: { bg: 'bg-indigo-500', icon: 'ph-info' }
-            };
-            const conf = typeConfig[type] || typeConfig.info;
-
-            toast.className = `flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${conf.bg} toast-enter`;
-            toast.innerHTML = `<i class="ph ${conf.icon} text-lg"></i> <span>${message}</span>`;
-            
-            container.appendChild(toast);
-            
-            // Animate in
-            requestAnimationFrame(() => {
-                toast.classList.remove('toast-enter');
-                toast.classList.add('toast-enter-active');
-            });
-
-            // Remove after 3s
-            setTimeout(() => {
-                toast.classList.replace('toast-enter-active', 'toast-leave');
-                requestAnimationFrame(() => toast.classList.add('toast-leave-active'));
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        // --- LEITURA DE ARQUIVO EXCEL ---
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
+        // Lógica de Leitura do Excel
+        let alunosData = [];
+        document.getElementById('excelFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const jsonRaw = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-                    processExcelData(jsonRaw);
-                    showToast(`${AppState.students.length} alunos importados com sucesso!`, 'success');
-                    
-                    // Reset file input
-                    event.target.value = '';
-                } catch (error) {
-                    console.error(error);
-                    showToast('Erro ao processar o arquivo. Verifique o formato.', 'error');
-                }
+            reader.onload = function(event) {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Converter Excel para JSON
+                alunosData = XLSX.utils.sheet_to_json(worksheet);
+                
+                // Preencher a lista de seleção
+                const select = document.getElementById('alunoSelect');
+                select.innerHTML = '<option value="">Selecione o Aluno...</option>';
+                
+                alunosData.forEach(aluno => {
+                    // Assume que a coluna se chama 'Nome' ou 'NOME'
+                    const nome = aluno.Nome || aluno.NOME;
+                    if(nome) {
+                        const option = document.createElement('option');
+                        option.value = nome;
+                        option.textContent = `${nome} (Turma: ${aluno.Turma || '-'}, Série: ${aluno.Serie || '-'})`;
+                        select.appendChild(option);
+                    }
+                });
+                alert('Folha de cálculo carregada com sucesso!');
             };
             reader.readAsArrayBuffer(file);
-        }
+        });
 
-        function processExcelData(data) {
-            AppState.students = [];
-            AppState.currentStudentId = null;
+        // Lógica para Guardar no Firebase
+        document.getElementById('btnSalvar').addEventListener('click', async () => {
+            const alunoNome = document.getElementById('alunoSelect').value;
+            const olimpiada = document.getElementById('nomeOlimpiada').value;
+            const resultado = document.getElementById('resultadoSelect').value;
+
+            if (!alunoNome || !olimpiada) {
+                alert("Por favor, selecione um aluno e introduza o nome da olimpíada.");
+                return;
+            }
+
+            try {
+                // Guardar documento na coleção 'registos_olimpiadas'
+                await addDoc(collection(db, "registos_olimpiadas"), {
+                    nomeAluno: alunoNome,
+                    olimpiada: olimpiada,
+                    resultado: resultado,
+                    dataRegisto: new Date().toISOString()
+                });
+                
+                const msg = document.getElementById('msgSucesso');
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+                document.getElementById('nomeOlimpiada').value = ''; // limpar campo
+                
+            } catch (e) {
+                console.error("Erro ao adicionar documento: ", e);
+                alert("Erro ao guardar no Firebase. Verifique a configuração e as regras da base de dados.");
+            }
+        });
+
+        // Lógica para Ver o Resumo Académico
+        document.getElementById('btnResumo').addEventListener('click', async () => {
+            const alunoNome = document.getElementById('alunoSelect').value;
+            if (!alunoNome) {
+                alert("Selecione um aluno na secção 2 para ver o resumo.");
+                return;
+            }
+
+            const q = query(collection(db, "registos_olimpiadas"), where("nomeAluno", "==", alunoNome));
+            const querySnapshot = await getDocs(q);
             
-            data.forEach((row, index) => {
-                // Tenta encontrar chaves aproximadas independentemente de maiúsculas/minúsculas
-                const findKey = (keywords) => {
-                    const keys = Object.keys(row);
-                    for(let k of keys) {
-                        for(let word of keywords) {
-                            if(k.toLowerCase().includes(word)) return row[k];
-                        }
-                    }
-                    return "N/I"; // Não Informado
-                };
+            let totalParticipacoes = 0;
+            let totalMedalhas = 0;
 
-                const nome = findKey(['nome', 'aluno']);
-                const turma = findKey(['turma', 'sala', 'classe']);
-                const serie = findKey(['série', 'serie', 'ano', 'grau']);
-                const idade = findKey(['idade']);
-
-                if (nome && nome !== "N/I") {
-                    AppState.students.push({
-                        id: index + 1,
-                        nome: String(nome).trim(),
-                        turma: String(turma).trim(),
-                        serie: String(serie).trim(),
-                        idade: String(idade).trim(),
-                        olimpiadas: [] // Array para guardar as olimpíadas
-                    });
+            querySnapshot.forEach((doc) => {
+                totalParticipacoes++;
+                if(doc.data().resultado.includes("Premiado")) {
+                    totalMedalhas++;
                 }
             });
 
-            renderStudents();
-            document.getElementById('empty-state').classList.remove('hidden');
-            document.getElementById('student-detail').classList.add('hidden');
-        }
+            const area = document.getElementById('resultadoArea');
+            area.classList.remove('hidden');
+            area.innerHTML = `
+                <h3 class="font-bold text-lg text-purple-700">Resumo de ${alunoNome}</h3>
+                <p class="mt-2"><strong>Total de Olimpíadas:</strong> ${totalParticipacoes}</p>
+                <p><strong>Total de Premiações (Medalhas/Menções):</strong> ${totalMedalhas}</p>
+            `;
+        });
 
-        // --- RENDERIZAÇÃO DA LISTA E SELEÇÃO ---
-        function renderStudents() {
-            const listEl = document.getElementById('student-list');
-            const countEl = document.getElementById('student-count');
-            const searchStr = document.getElementById('search-input').value.toLowerCase();
-
-            listEl.innerHTML = '';
-            
-            const filtered = AppState.students.filter(s => s.nome.toLowerCase().includes(searchStr));
-            countEl.innerText = filtered.length;
-
-            if (filtered.length === 0) {
-                listEl.innerHTML = `<div class="text-center p-4 text-gray-400 text-sm">Nenhum aluno encontrado.</div>`;
+        // Lógica para Ver o Histórico Detalhado
+        document.getElementById('btnHistorico').addEventListener('click', async () => {
+            const alunoNome = document.getElementById('alunoSelect').value;
+            if (!alunoNome) {
+                alert("Selecione um aluno na secção 2 para ver o histórico.");
                 return;
             }
 
-            filtered.forEach(aluno => {
-                const isSelected = AppState.currentStudentId === aluno.id;
-                const li = document.createElement('li');
-                li.className = `p-3 rounded-lg cursor-pointer border transition-all duration-200 ${isSelected ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-200'}`;
-                li.onclick = () => selectStudent(aluno.id);
-                
-                // Pega 1ª letra
-                const initials = aluno.nome.charAt(0).toUpperCase();
-
-                li.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm ${isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}">
-                            ${initials}
-                        </div>
-                        <div class="overflow-hidden">
-                            <h4 class="text-sm font-semibold text-gray-800 truncate" title="${aluno.nome}">${aluno.nome}</h4>
-                            <p class="text-xs text-gray-500 truncate">${aluno.turma} • ${aluno.serie}</p>
-                        </div>
-                    </div>
-                `;
-                listEl.appendChild(li);
-            });
-        }
-
-        function selectStudent(id) {
-            AppState.currentStudentId = id;
-            renderStudents(); // Update selection visual state
+            const q = query(collection(db, "registos_olimpiadas"), where("nomeAluno", "==", alunoNome));
+            const querySnapshot = await getDocs(q);
             
-            const aluno = AppState.students.find(s => s.id === id);
-            if (!aluno) return;
+            let premiados = [];
+            let fases = [];
+            let participacoes = [];
 
-            // Preenche Header
-            document.getElementById('detail-initials').innerText = aluno.nome.charAt(0).toUpperCase();
-            document.getElementById('detail-name').innerText = aluno.nome;
-            document.getElementById('detail-turma').innerText = "Turma " + aluno.turma;
-            document.getElementById('detail-serie').innerText = aluno.serie;
-            document.getElementById('detail-idade').innerText = aluno.idade + " anos";
-
-            // Troca views
-            document.getElementById('empty-state').classList.add('hidden');
-            document.getElementById('student-detail').classList.remove('hidden');
-
-            renderRecords();
-        }
-
-        // --- ADIÇÃO DE OLIMPÍADA ---
-        function addOlympiad(event) {
-            event.preventDefault();
-            const id = AppState.currentStudentId;
-            if(!id) return;
-
-            const nome = document.getElementById('input-olimpiada').value.trim();
-            const ano = document.getElementById('input-ano').value.trim();
-            const statusVal = document.getElementById('input-status').value;
-
-            if(!nome || !statusVal) return;
-
-            const aluno = AppState.students.find(s => s.id === id);
-            
-            // Add ao inicio do array
-            aluno.olimpiadas.unshift({
-                id: Date.now(),
-                nome: nome,
-                ano: ano,
-                status: statusVal
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if(data.resultado.includes("Premiado")) premiados.push(`${data.olimpiada} (${data.resultado})`);
+                else if(data.resultado === "Avançou de Fase") fases.push(data.olimpiada);
+                else participacoes.push(data.olimpiada);
             });
 
-            // Reseta form
-            document.getElementById('form-olimpiada').reset();
+            const area = document.getElementById('resultadoArea');
+            area.classList.remove('hidden');
             
-            showToast('Resultado registrado!', 'success');
-            renderRecords();
-        }
-
-        function removeOlympiad(recordId) {
-            const aluno = AppState.students.find(s => s.id === AppState.currentStudentId);
-            if(!aluno) return;
-
-            aluno.olimpiadas = aluno.olimpiadas.filter(o => o.id !== recordId);
-            showToast('Registro removido.', 'info');
-            renderRecords();
-        }
-
-        // --- RENDERIZAR REGISTROS (CARDS) ---
-        function renderRecords() {
-            const listEl = document.getElementById('records-list');
-            const aluno = AppState.students.find(s => s.id === AppState.currentStudentId);
+            // Construir o HTML do Histórico
+            let html = `<h3 class="font-bold text-lg text-indigo-700 mb-3">Histórico Detalhado: ${alunoNome}</h3>`;
             
-            listEl.innerHTML = '';
+            html += `<div class="mb-2"><strong class="text-yellow-600">🏆 Premiado:</strong>`;
+            if (premiados.length > 0) html += `<ul class="list-disc ml-6">` + premiados.map(p => `<li>${p}</li>`).join('') + `</ul>`;
+            else html += ` <span class="text-gray-500">Nenhum registo.</span>`;
+            html += `</div>`;
 
-            if(!aluno || aluno.olimpiadas.length === 0) {
-                listEl.innerHTML = `<div class="col-span-full p-8 text-center text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
-                    <i class="ph ph-empty text-4xl mb-2 opacity-50"></i>
-                    <p>Nenhum registro para este aluno.</p>
-                </div>`;
-                return;
-            }
+            html += `<div class="mb-2"><strong class="text-blue-600">🚀 Avançou de Fase:</strong>`;
+            if (fases.length > 0) html += `<ul class="list-disc ml-6">` + fases.map(p => `<li>${p}</li>`).join('') + `</ul>`;
+            else html += ` <span class="text-gray-500">Nenhum registo.</span>`;
+            html += `</div>`;
 
-            aluno.olimpiadas.forEach(rec => {
-                const conf = StatusConfig[rec.status];
-                const card = document.createElement('div');
-                card.className = "bg-white p-4 rounded-xl border border-gray-100 shadow-sm relative group";
-                
-                card.innerHTML = `
-                    <button onclick="removeOlympiad(${rec.id})" class="absolute top-2 right-2 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
-                        <i class="ph-fill ph-trash"></i>
-                    </button>
-                    <div class="flex items-start gap-3">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${conf.color} ${conf.text}">
-                            <i class="ph-fill ${conf.icon} text-xl"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-gray-800 leading-tight">${rec.nome}</h4>
-                            ${rec.ano ? `<p class="text-xs text-gray-400 mb-1">Edição ${rec.ano}</p>` : ''}
-                            <span class="inline-block mt-1 px-2 py-0.5 text-[11px] font-bold uppercase rounded ${conf.color} ${conf.text}">
-                                ${conf.label}
-                            </span>
-                        </div>
-                    </div>
-                `;
-                listEl.appendChild(card);
-            });
-        }
+            html += `<div><strong class="text-gray-600">📝 Apenas Participou:</strong>`;
+            if (participacoes.length > 0) html += `<ul class="list-disc ml-6">` + participacoes.map(p => `<li>${p}</li>`).join('') + `</ul>`;
+            else html += ` <span class="text-gray-500">Nenhum registo.</span>`;
+            html += `</div>`;
 
-        // --- MODAIS ---
-        function openModal(modalId) {
-            if(!AppState.currentStudentId) return;
-
-            const modal = document.getElementById(modalId);
-            const content = document.getElementById(modalId + '-content');
-            
-            if(modalId === 'modal-resumo') prepareResumo();
-            if(modalId === 'modal-detalhes') prepareDetalhes();
-
-            modal.classList.remove('hidden');
-            // Timeout para garantir que o display block foi aplicado antes de animar opacidade
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                content.classList.remove('scale-95');
-                content.classList.add('scale-100');
-            }, 10);
-        }
-
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            const content = document.getElementById(modalId + '-content');
-            
-            modal.classList.add('opacity-0');
-            content.classList.remove('scale-100');
-            content.classList.add('scale-95');
-            
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300); // tempo da transição
-        }
-
-        // --- LÓGICA DO RESUMO ACADÊMICO ---
-        function prepareResumo() {
-            const aluno = AppState.students.find(s => s.id === AppState.currentStudentId);
-            
-            document.getElementById('resumo-name').innerText = aluno.nome;
-            document.getElementById('resumo-subtitle').innerText = `${aluno.turma} • ${aluno.serie}`;
-
-            let counts = { total: 0, medalhas: 0, ouro: 0, prata: 0, bronze: 0, outros: 0 };
-            
-            aluno.olimpiadas.forEach(o => {
-                counts.total++;
-                if(o.status === 'Ouro') { counts.ouro++; counts.medalhas++; }
-                else if(o.status === 'Prata') { counts.prata++; counts.medalhas++; }
-                else if(o.status === 'Bronze') { counts.bronze++; counts.medalhas++; }
-                else { counts.outros++; }
-            });
-
-            document.getElementById('resumo-total').innerText = counts.total;
-            document.getElementById('resumo-medalhas').innerText = counts.medalhas;
-            document.getElementById('resumo-ouro').innerText = counts.ouro;
-            document.getElementById('resumo-prata').innerText = counts.prata;
-            document.getElementById('resumo-bronze').innerText = counts.bronze;
-            document.getElementById('resumo-outros').innerText = counts.outros;
-        }
-
-        // --- LÓGICA DO HISTÓRICO DETALHADO (A PEDIDO DO USUÁRIO) ---
-        function prepareDetalhes() {
-            const aluno = AppState.students.find(s => s.id === AppState.currentStudentId);
-            document.getElementById('detalhes-nome-aluno').innerText = `${aluno.nome} - ${aluno.serie}`;
-            
-            const container = document.getElementById('detalhes-list-container');
-            container.innerHTML = '';
-
-            // Agrupar por categoria
-            const groups = {
-                premiado: [],
-                fase: [],
-                participacao: []
-            };
-
-            aluno.olimpiadas.forEach(o => {
-                const cat = StatusConfig[o.status].category;
-                groups[cat].push(o);
-            });
-
-            // Função helper para criar secção
-            const renderSection = (title, icon, items, bgColor, textColor, borderColor) => {
-                if(items.length === 0) return '';
-                
-                let html = `
-                <div class="mb-6 bg-white border ${borderColor} rounded-xl overflow-hidden shadow-sm">
-                    <div class="${bgColor} ${textColor} px-4 py-3 border-b ${borderColor} font-bold flex items-center gap-2">
-                        <i class="ph-fill ${icon} text-xl"></i> ${title} <span class="bg-white/30 px-2 py-0.5 rounded text-xs ml-auto">${items.length}</span>
-                    </div>
-                    <div class="divide-y divide-gray-100">
-                `;
-                
-                items.forEach(item => {
-                    const conf = StatusConfig[item.status];
-                    html += `
-                        <div class="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                            <div>
-                                <h5 class="font-bold text-gray-800">${item.nome}</h5>
-                                ${item.ano ? `<span class="text-xs text-gray-500">Edição: ${item.ano}</span>` : ''}
-                            </div>
-                            <span class="px-3 py-1 text-xs font-bold rounded-full ${conf.color} ${conf.text}">
-                                ${conf.label}
-                            </span>
-                        </div>
-                    `;
-                });
-
-                html += `</div></div>`;
-                return html;
-            };
-
-            let finalHtml = '';
-            finalHtml += renderSection('Premiações (Medalhas e Menções)', 'ph-trophy', groups.premiado, 'bg-yellow-50', 'text-yellow-800', 'border-yellow-100');
-            finalHtml += renderSection('Avanço de Fases', 'ph-steps', groups.fase, 'bg-purple-50', 'text-purple-800', 'border-purple-100');
-            finalHtml += renderSection('Apenas Participação', 'ph-check-square-offset', groups.participacao, 'bg-gray-100', 'text-gray-700', 'border-gray-200');
-
-            if(finalHtml === '') {
-                finalHtml = `
-                    <div class="text-center text-gray-400 py-10">
-                        <i class="ph ph-folder-open text-5xl mb-3 opacity-50"></i>
-                        <p>Ainda não há registros de olimpíadas para detalhar.</p>
-                    </div>
-                `;
-            }
-
-            container.innerHTML = finalHtml;
-        }
-
+            area.innerHTML = html;
+        });
     </script>
 </body>
 </html>
