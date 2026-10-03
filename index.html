@@ -6,136 +6,342 @@
     <title>Gestão de Olimpíadas Científicas</title>
     <!-- Tailwind CSS para um design moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ícones FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS para ler ficheiros Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* Personalização da barra de rolagem */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Animação para notificações */
+        .toast-enter { animation: slideInRight 0.3s ease-out forwards; }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans p-6">
+<body class="bg-slate-50 text-slate-800 font-sans h-screen overflow-hidden flex flex-col md:flex-row">
 
-    <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
-        <h1 class="text-3xl font-bold text-center text-blue-600 mb-8">Gestão de Olimpíadas Académicas</h1>
+    <!-- Notificações no ecrã (Toasts) -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-3"></div>
 
-        <!-- Secção 1: Importar Planilha Excel -->
-        <div class="mb-8 p-4 border border-blue-200 bg-blue-50 rounded-lg">
-            <h2 class="text-xl font-semibold mb-2">1. Importar Alunos (Excel)</h2>
-            <p class="text-sm text-gray-600 mb-4">A folha de cálculo deve conter as colunas: Nome, Turma, Serie, Idade.</p>
-            <input type="file" id="excelFile" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"/>
+    <!-- BARRA LATERAL: Gestão de Planilhas -->
+    <div class="w-full md:w-1/3 lg:w-1/4 bg-white border-r border-slate-200 flex flex-col h-full shadow-lg z-10">
+        <div class="p-6 border-b border-slate-100 bg-blue-600 text-white">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-medal text-yellow-300"></i>
+                Olimpíadas Académicas
+            </h1>
+            <p class="text-blue-100 text-sm mt-1">Gestão Escolar Avançada</p>
         </div>
 
-        <!-- Secção 2: Adicionar Resultado Olímpico -->
-        <div class="mb-8 p-4 border border-green-200 bg-green-50 rounded-lg">
-            <h2 class="text-xl font-semibold mb-4">2. Registar Desempenho do Aluno</h2>
+        <div class="p-6 flex-1 overflow-y-auto">
+            <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Base de Dados (Planilhas)</h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Selecionar Aluno</label>
-                    <select id="alunoSelect" class="w-full p-2 border rounded">
-                        <option value="">Carregue o Excel primeiro...</option>
-                    </select>
+            <!-- Zona de Upload -->
+            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition mb-6 group">
+                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                    <i class="fas fa-cloud-upload-alt text-2xl text-slate-400 group-hover:text-blue-500 mb-2 transition"></i>
+                    <p class="text-sm text-slate-500 text-center px-2"><span class="font-semibold text-blue-600">Clique para carregar</span><br>ou arraste o Excel</p>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Olimpíada (Ex: OBMEP, OBA, OBF)</label>
-                    <input type="text" id="nomeOlimpiada" class="w-full p-2 border rounded" placeholder="Nome da Olimpíada">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Resultado / Fase</label>
-                    <select id="resultadoSelect" class="w-full p-2 border rounded">
-                        <option value="Premiado - Ouro">Premiado - Medalha de Ouro</option>
-                        <option value="Premiado - Prata">Premiado - Medalha de Prata</option>
-                        <option value="Premiado - Bronze">Premiado - Medalha de Bronze</option>
-                        <option value="Premiado - Menção Honrosa">Premiado - Menção Honrosa</option>
-                        <option value="Avançou de Fase">Avançou de Fase</option>
-                        <option value="Apenas Participou">Apenas Participou</option>
-                    </select>
-                </div>
-            </div>
-            <button id="btnSalvar" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full transition">Guardar no Firebase</button>
-            <p id="msgSucesso" class="text-green-700 text-sm mt-2 hidden text-center font-bold">Registo guardado com sucesso!</p>
-        </div>
+                <input type="file" id="excelFile" accept=".xlsx, .xls" class="hidden" />
+            </label>
 
-        <!-- Secção 3: Resumo Académico -->
-        <div class="mb-8 p-4 border border-purple-200 bg-purple-50 rounded-lg">
-            <h2 class="text-xl font-semibold mb-4">3. Resumo Académico</h2>
-            <div class="flex gap-4 mb-4">
-                <button id="btnResumo" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 flex-1 transition">Ver Resumo Geral</button>
-                <button id="btnHistorico" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex-1 transition">Ver Histórico Detalhado</button>
-            </div>
+            <!-- Lista de Planilhas Salvas -->
+            <h3 class="text-sm font-semibold text-slate-700 mb-3 flex items-center justify-between">
+                Planilhas Guardadas
+                <span id="contadorPlanilhas" class="bg-blue-100 text-blue-700 py-0.5 px-2 rounded-full text-xs">0</span>
+            </h3>
             
-            <!-- Área onde os resultados vão aparecer -->
-            <div id="resultadoArea" class="bg-white p-4 border rounded shadow-inner min-h-[100px] hidden"></div>
+            <div id="listaPlanilhas" class="space-y-3">
+                <p class="text-sm text-slate-400 italic text-center py-4">A carregar base de dados...</p>
+                <!-- Planilhas aparecerão aqui -->
+            </div>
         </div>
     </div>
 
-    <!-- FIREBASE MODULES (Versão 10 Modular) -->
-    <script type="module">
-        // Importar as funções do Firebase através de CDNs
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+    <!-- CONTEÚDO PRINCIPAL: Ações e Resumos -->
+    <div class="w-full md:w-2/3 lg:w-3/4 h-full overflow-y-auto bg-slate-50 p-6 md:p-10">
+        
+        <div class="max-w-4xl mx-auto space-y-8">
+            
+            <!-- Cartão 1: Registar Desempenho -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-800 p-4 border-b border-slate-100">
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                        <i class="fas fa-user-graduate text-blue-400"></i> Registar Desempenho do Aluno
+                    </h2>
+                </div>
+                
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Selecionar Aluno (Base Global)</label>
+                            <div class="relative">
+                                <select id="alunoSelect" class="w-full p-3 pl-10 border border-slate-300 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm">
+                                    <option value="">A carregar alunos...</option>
+                                </select>
+                                <i class="fas fa-search absolute left-3 top-3.5 text-slate-400"></i>
+                                <i class="fas fa-chevron-down absolute right-3 top-3.5 text-slate-400 pointer-events-none"></i>
+                            </div>
+                        </div>
 
-        // =====================================================================
-        // PASSO IMPORTANTE: COLOQUE AS SUAS CHAVES DO FIREBASE AQUI
-        // Substitua o objeto abaixo pelo 'firebaseConfig' que copiou do Firebase
-        // =====================================================================
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Nome da Olimpíada</label>
+                            <input type="text" id="nomeOlimpiada" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 shadow-sm" placeholder="Ex: OBMEP, OBA, Canguru...">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Resultado / Fase</label>
+                            <select id="resultadoSelect" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 shadow-sm">
+                                <option value="Premiado - Ouro">🥇 Premiado - Medalha de Ouro</option>
+                                <option value="Premiado - Prata">🥈 Premiado - Medalha de Prata</option>
+                                <option value="Premiado - Bronze">🥉 Premiado - Medalha de Bronze</option>
+                                <option value="Premiado - Menção Honrosa">🏅 Premiado - Menção Honrosa</option>
+                                <option value="Avançou de Fase">🚀 Avançou de Fase</option>
+                                <option value="Apenas Participou">📝 Apenas Participou</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button id="btnSalvar" class="w-full bg-blue-600 text-white font-medium px-4 py-3 rounded-lg shadow hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-save"></i> Guardar Registo no Firebase
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cartão 2: Resumo e Histórico -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-indigo-50 p-4 border-b border-indigo-100 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-indigo-900 flex items-center gap-2">
+                        <i class="fas fa-chart-pie text-indigo-500"></i> Painel do Aluno
+                    </h2>
+                </div>
+                
+                <div class="p-6">
+                    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                        <button id="btnResumo" class="flex-1 bg-white border-2 border-indigo-600 text-indigo-700 font-medium px-4 py-3 rounded-lg hover:bg-indigo-50 transition flex items-center justify-center gap-2">
+                            <i class="fas fa-compress-alt"></i> Resumo Académico
+                        </button>
+                        <button id="btnHistorico" class="flex-1 bg-indigo-600 text-white font-medium px-4 py-3 rounded-lg shadow hover:bg-indigo-700 transition flex items-center justify-center gap-2">
+                            <i class="fas fa-list-ul"></i> Histórico Detalhado
+                        </button>
+                    </div>
+                    
+                    <!-- Área de visualização -->
+                    <div id="resultadoArea" class="bg-slate-50 border border-slate-200 rounded-xl p-6 hidden">
+                        <!-- O conteúdo será injetado aqui -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- FIREBASE MODULES -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+
+        // Configuração do Firebase fornecida pelo utilizador
         const firebaseConfig = {
- 		 apiKey: "AIzaSyBDA5CVPHeVBEb3KcaZH19Y7Pz7A-ghkWo",
-  		authDomain: "resultados-alunos-olimpicos.firebaseapp.com",
-  		projectId: "resultados-alunos-olimpicos",
-  		storageBucket: "resultados-alunos-olimpicos.firebasestorage.app",
- 		 messagingSenderId: "479169468642",
- 		 appId: "1:479169468642:web:f034041d13e954ef70a6bb"
+            apiKey: "AIzaSyBDA5CVPHeVBEb3KcaZH19Y7Pz7A-ghkWo",
+            authDomain: "resultados-alunos-olimpicos.firebaseapp.com",
+            projectId: "resultados-alunos-olimpicos",
+            storageBucket: "resultados-alunos-olimpicos.firebasestorage.app",
+            messagingSenderId: "479169468642",
+            appId: "1:479169468642:web:f034041d13e954ef70a6bb"
         };
 
-        // Inicializar Firebase e Firestore
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Lógica de Leitura do Excel
-        let alunosData = [];
+        // Sistema de Notificações (Toasts)
+        function showToast(mensagem, tipo = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const cores = {
+                success: 'bg-green-100 border-green-400 text-green-800',
+                error: 'bg-red-100 border-red-400 text-red-800',
+                info: 'bg-blue-100 border-blue-400 text-blue-800'
+            };
+            const icones = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+
+            toast.className = `toast-enter flex items-center gap-3 px-4 py-3 border-l-4 rounded shadow-lg min-w-[250px] ${cores[tipo]}`;
+            toast.innerHTML = `<i class="fas ${icones[tipo]} text-lg"></i><span class="font-medium text-sm">${mensagem}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ==========================================
+        // GESTÃO DE PLANILHAS (BASE DE DADOS GLOBAL)
+        // ==========================================
+        
+        let todosOsAlunosGlobais = new Map(); // Para evitar nomes repetidos caso haja alunos em múltiplas planilhas
+
+        // Função para carregar todas as planilhas do Firebase
+        async function carregarPlanilhasSalvas() {
+            const listaDiv = document.getElementById('listaPlanilhas');
+            const selectDiv = document.getElementById('alunoSelect');
+            listaDiv.innerHTML = `<p class="text-sm text-slate-400 text-center py-4"><i class="fas fa-spinner fa-spin"></i> A atualizar...</p>`;
+            
+            todosOsAlunosGlobais.clear(); // Limpar lista local
+
+            try {
+                // Tenta carregar as planilhas ordenadas (requer criação de index no firebase se falhar, mas vamos fazer sem orderby para não dar erro inicial)
+                const q = query(collection(db, "planilhas"));
+                const querySnapshot = await getDocs(q);
+                
+                listaDiv.innerHTML = '';
+                document.getElementById('contadorPlanilhas').innerText = querySnapshot.size;
+
+                if(querySnapshot.empty) {
+                    listaDiv.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhuma planilha carregada ainda.</p>`;
+                    selectDiv.innerHTML = '<option value="">Carregue uma planilha primeiro...</option>';
+                    return;
+                }
+
+                querySnapshot.forEach((documento) => {
+                    const data = documento.data();
+                    const id = documento.id;
+                    const dataUpload = data.dataUpload ? new Date(data.dataUpload).toLocaleDateString('pt-PT') : 'Data desconhecida';
+
+                    // Alimentar a lista visual lateral
+                    const item = document.createElement('div');
+                    item.className = "group flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 transition";
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <i class="fas fa-file-excel text-green-600 text-xl"></i>
+                            <div class="truncate">
+                                <p class="text-sm font-semibold text-slate-700 truncate">${data.nomeArquivo}</p>
+                                <p class="text-xs text-slate-400">${dataUpload} • ${data.alunos.length} alunos</p>
+                            </div>
+                        </div>
+                        <button class="btn-excluir text-slate-300 hover:text-red-500 transition px-2 py-1" data-id="${id}" title="Excluir Planilha">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
+                    listaDiv.appendChild(item);
+
+                    // Alimentar o Map global de alunos
+                    data.alunos.forEach(aluno => {
+                        const nome = aluno.Nome || aluno.NOME;
+                        if(nome) todosOsAlunosGlobais.set(nome, aluno);
+                    });
+                });
+
+                // Atualizar o Select de Alunos
+                atualizarDropdownAlunos();
+
+                // Adicionar evento de exclusão aos botões gerados
+                document.querySelectorAll('.btn-excluir').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = e.currentTarget.getAttribute('data-id');
+                        if(confirm("Tem a certeza que deseja excluir esta planilha? Os registos de medalhas dos alunos não serão apagados, mas a planilha sairá da base.")) {
+                            await deleteDoc(doc(db, "planilhas", id));
+                            showToast("Planilha excluída com sucesso!", "success");
+                            carregarPlanilhasSalvas(); // Recarregar
+                        }
+                    });
+                });
+
+            } catch (error) {
+                console.error("Erro ao carregar planilhas:", error);
+                listaDiv.innerHTML = `<p class="text-xs text-red-500 text-center py-4">Erro ao ligar ao servidor.</p>`;
+            }
+        }
+
+        // Função para atualizar o dropdown com a lista global
+        function atualizarDropdownAlunos() {
+            const select = document.getElementById('alunoSelect');
+            select.innerHTML = '<option value="">Selecione um aluno ou pesquise...</option>';
+            
+            // Ordenar alfabeticamente
+            const alunosOrdenados = Array.from(todosOsAlunosGlobais.keys()).sort();
+            
+            alunosOrdenados.forEach(nome => {
+                const aluno = todosOsAlunosGlobais.get(nome);
+                const option = document.createElement('option');
+                option.value = nome;
+                const turmaStr = aluno.Turma ? ` | Turma: ${aluno.Turma}` : '';
+                option.textContent = `${nome}${turmaStr}`;
+                select.appendChild(option);
+            });
+        }
+
+        // Fazer upload e salvar no Firebase
         document.getElementById('excelFile').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
+            showToast("A ler e a guardar planilha na nuvem...", "info");
+
             const reader = new FileReader();
-            reader.onload = function(event) {
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                // Converter Excel para JSON
-                alunosData = XLSX.utils.sheet_to_json(worksheet);
-                
-                // Preencher a lista de seleção
-                const select = document.getElementById('alunoSelect');
-                select.innerHTML = '<option value="">Selecione o Aluno...</option>';
-                
-                alunosData.forEach(aluno => {
-                    // Assume que a coluna se chama 'Nome' ou 'NOME'
-                    const nome = aluno.Nome || aluno.NOME;
-                    if(nome) {
-                        const option = document.createElement('option');
-                        option.value = nome;
-                        option.textContent = `${nome} (Turma: ${aluno.Turma || '-'}, Série: ${aluno.Serie || '-'})`;
-                        select.appendChild(option);
-                    }
-                });
-                alert('Folha de cálculo carregada com sucesso!');
+            reader.onload = async function(event) {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonAlunos = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    // Gravar no Firestore na coleção "planilhas"
+                    await addDoc(collection(db, "planilhas"), {
+                        nomeArquivo: file.name,
+                        alunos: jsonAlunos,
+                        dataUpload: new Date().toISOString()
+                    });
+
+                    showToast("Planilha guardada permanentemente com sucesso!", "success");
+                    document.getElementById('excelFile').value = ''; // Limpar input
+                    carregarPlanilhasSalvas(); // Atualizar tudo
+
+                } catch (error) {
+                    console.error(error);
+                    showToast("Erro ao processar o Excel.", "error");
+                }
             };
             reader.readAsArrayBuffer(file);
         });
 
-        // Lógica para Guardar no Firebase
+        // Iniciar ao carregar a página
+        carregarPlanilhasSalvas();
+
+        // ==========================================
+        // GESTÃO DE REGISTOS (MEDALHAS E RESULTADOS)
+        // ==========================================
+
         document.getElementById('btnSalvar').addEventListener('click', async () => {
             const alunoNome = document.getElementById('alunoSelect').value;
             const olimpiada = document.getElementById('nomeOlimpiada').value;
             const resultado = document.getElementById('resultadoSelect').value;
 
             if (!alunoNome || !olimpiada) {
-                alert("Por favor, selecione um aluno e introduza o nome da olimpíada.");
+                showToast("Selecione o aluno e o nome da olimpíada.", "error");
                 return;
             }
 
+            const btn = document.getElementById('btnSalvar');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A guardar...';
+            btn.disabled = true;
+
             try {
-                // Guardar documento na coleção 'registos_olimpiadas'
                 await addDoc(collection(db, "registos_olimpiadas"), {
                     nomeAluno: alunoNome,
                     olimpiada: olimpiada,
@@ -143,65 +349,75 @@
                     dataRegisto: new Date().toISOString()
                 });
                 
-                const msg = document.getElementById('msgSucesso');
-                msg.classList.remove('hidden');
-                setTimeout(() => msg.classList.add('hidden'), 3000);
-                document.getElementById('nomeOlimpiada').value = ''; // limpar campo
+                showToast(`Registo de ${alunoNome} guardado!`, "success");
+                document.getElementById('nomeOlimpiada').value = '';
                 
-            } catch (e) {
-                console.error("Erro ao adicionar documento: ", e);
-                alert("Erro ao guardar no Firebase. Verifique a configuração e as regras da base de dados.");
+            } catch (error) {
+                console.error(error);
+                showToast("Erro ao guardar o registo.", "error");
+            } finally {
+                btn.innerHTML = '<i class="fas fa-save"></i> Guardar Registo no Firebase';
+                btn.disabled = false;
             }
         });
 
-        // Lógica para Ver o Resumo Académico
+        // ==========================================
+        // CONSULTAS: RESUMO E HISTÓRICO
+        // ==========================================
+
         document.getElementById('btnResumo').addEventListener('click', async () => {
             const alunoNome = document.getElementById('alunoSelect').value;
-            if (!alunoNome) {
-                alert("Selecione um aluno na secção 2 para ver o resumo.");
-                return;
-            }
+            if (!alunoNome) return showToast("Selecione um aluno primeiro.", "info");
 
+            showToast("A procurar dados...", "info");
             const q = query(collection(db, "registos_olimpiadas"), where("nomeAluno", "==", alunoNome));
             const querySnapshot = await getDocs(q);
             
-            let totalParticipacoes = 0;
-            let totalMedalhas = 0;
+            let totalParticipacoes = 0, totalMedalhas = 0;
 
             querySnapshot.forEach((doc) => {
                 totalParticipacoes++;
-                if(doc.data().resultado.includes("Premiado")) {
-                    totalMedalhas++;
-                }
+                if(doc.data().resultado.includes("Premiado")) totalMedalhas++;
             });
 
             const area = document.getElementById('resultadoArea');
             area.classList.remove('hidden');
             area.innerHTML = `
-                <h3 class="font-bold text-lg text-purple-700">Resumo de ${alunoNome}</h3>
-                <p class="mt-2"><strong>Total de Olimpíadas:</strong> ${totalParticipacoes}</p>
-                <p><strong>Total de Premiações (Medalhas/Menções):</strong> ${totalMedalhas}</p>
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xl">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800">${alunoNome}</h3>
+                        <p class="text-sm text-slate-500">Resumo de Atividades</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white p-4 rounded-lg border border-slate-200 text-center shadow-sm">
+                        <p class="text-3xl font-bold text-indigo-600">${totalParticipacoes}</p>
+                        <p class="text-xs text-slate-500 uppercase font-semibold mt-1">Olimpíadas</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border border-yellow-200 text-center shadow-sm">
+                        <p class="text-3xl font-bold text-yellow-600">${totalMedalhas}</p>
+                        <p class="text-xs text-slate-500 uppercase font-semibold mt-1">Premiações</p>
+                    </div>
+                </div>
             `;
         });
 
-        // Lógica para Ver o Histórico Detalhado
         document.getElementById('btnHistorico').addEventListener('click', async () => {
             const alunoNome = document.getElementById('alunoSelect').value;
-            if (!alunoNome) {
-                alert("Selecione um aluno na secção 2 para ver o histórico.");
-                return;
-            }
+            if (!alunoNome) return showToast("Selecione um aluno primeiro.", "info");
 
+            showToast("A gerar histórico...", "info");
             const q = query(collection(db, "registos_olimpiadas"), where("nomeAluno", "==", alunoNome));
             const querySnapshot = await getDocs(q);
             
-            let premiados = [];
-            let fases = [];
-            let participacoes = [];
+            let premiados = [], fases = [], participacoes = [];
 
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                if(data.resultado.includes("Premiado")) premiados.push(`${data.olimpiada} (${data.resultado})`);
+                if(data.resultado.includes("Premiado")) premiados.push(`${data.olimpiada} <span class="text-xs font-bold bg-yellow-100 text-yellow-800 px-2 py-1 rounded ml-2">${data.resultado.replace('Premiado - ', '')}</span>`);
                 else if(data.resultado === "Avançou de Fase") fases.push(data.olimpiada);
                 else participacoes.push(data.olimpiada);
             });
@@ -209,23 +425,28 @@
             const area = document.getElementById('resultadoArea');
             area.classList.remove('hidden');
             
-            // Construir o HTML do Histórico
-            let html = `<h3 class="font-bold text-lg text-indigo-700 mb-3">Histórico Detalhado: ${alunoNome}</h3>`;
+            let html = `
+                <h3 class="font-bold text-lg text-slate-800 border-b pb-2 mb-4"><i class="fas fa-history text-slate-400 mr-2"></i> Trilha de ${alunoNome}</h3>
+                <div class="space-y-4">
+            `;
             
-            html += `<div class="mb-2"><strong class="text-yellow-600">🏆 Premiado:</strong>`;
-            if (premiados.length > 0) html += `<ul class="list-disc ml-6">` + premiados.map(p => `<li>${p}</li>`).join('') + `</ul>`;
-            else html += ` <span class="text-gray-500">Nenhum registo.</span>`;
-            html += `</div>`;
+            html += `
+                <div class="bg-white p-4 rounded-lg border-l-4 border-yellow-400 shadow-sm">
+                    <strong class="text-yellow-600 flex items-center gap-2 mb-2"><i class="fas fa-trophy"></i> Premiações</strong>
+                    ${premiados.length > 0 ? `<ul class="space-y-2 text-sm text-slate-700 ml-6 list-disc">` + premiados.map(p => `<li>${p}</li>`).join('') + `</ul>` : `<p class="text-sm text-slate-400 ml-6">Nenhum registo de premiação.</p>`}
+                </div>`;
 
-            html += `<div class="mb-2"><strong class="text-blue-600">🚀 Avançou de Fase:</strong>`;
-            if (fases.length > 0) html += `<ul class="list-disc ml-6">` + fases.map(p => `<li>${p}</li>`).join('') + `</ul>`;
-            else html += ` <span class="text-gray-500">Nenhum registo.</span>`;
-            html += `</div>`;
+            html += `
+                <div class="bg-white p-4 rounded-lg border-l-4 border-blue-400 shadow-sm">
+                    <strong class="text-blue-600 flex items-center gap-2 mb-2"><i class="fas fa-rocket"></i> Avanços de Fase</strong>
+                    ${fases.length > 0 ? `<ul class="space-y-2 text-sm text-slate-700 ml-6 list-disc">` + fases.map(p => `<li>${p}</li>`).join('') + `</ul>` : `<p class="text-sm text-slate-400 ml-6">Nenhum registo nesta categoria.</p>`}
+                </div>`;
 
-            html += `<div><strong class="text-gray-600">📝 Apenas Participou:</strong>`;
-            if (participacoes.length > 0) html += `<ul class="list-disc ml-6">` + participacoes.map(p => `<li>${p}</li>`).join('') + `</ul>`;
-            else html += ` <span class="text-gray-500">Nenhum registo.</span>`;
-            html += `</div>`;
+            html += `
+                <div class="bg-white p-4 rounded-lg border-l-4 border-slate-300 shadow-sm">
+                    <strong class="text-slate-600 flex items-center gap-2 mb-2"><i class="fas fa-pen-alt"></i> Apenas Participação</strong>
+                    ${participacoes.length > 0 ? `<ul class="space-y-2 text-sm text-slate-700 ml-6 list-disc">` + participacoes.map(p => `<li>${p}</li>`).join('') + `</ul>` : `<p class="text-sm text-slate-400 ml-6">Nenhum registo nesta categoria.</p>`}
+                </div></div>`;
 
             area.innerHTML = html;
         });
